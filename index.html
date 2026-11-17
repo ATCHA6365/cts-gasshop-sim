@@ -154,9 +154,11 @@ tr.new td{background:#fffbe0}
   <h3>🗄️ ฐานข้อมูล Excel (Live)</h3>
   <div class="st" id="dbst"></div>
   <div class="bt">
-    <button onclick="connectFile()">📂 เชื่อมไฟล์ Excel</button>
-    <button onclick="downloadXlsx()">⬇️ ดาวน์โหลด .xlsx</button>
-    <button class="d" onclick="resetDb()">↺ รีเซ็ตข้อมูล</button>
+    <button onclick="connectFile()">📂 เชื่อมไฟล์ Excel (บันทึกลงไฟล์อัตโนมัติ)</button>
+    <button id="rcbtn" onclick="reconnectFile()" style="display:none">🔗 เชื่อมไฟล์เดิมอีกครั้ง</button>
+    <button onclick="saveAsNew()">🆕 สร้างไฟล์ฐานข้อมูลใหม่แล้วเชื่อม</button>
+    <button onclick="downloadXlsx()">⬇️ ดาวน์โหลดข้อมูลปัจจุบัน .xlsx</button>
+    <button class="d" onclick="resetDb()">🧹 เคลียร์ข้อมูล (กลับค่าเริ่มต้น)</button>
   </div>
   <div class="dl"><b>📥 ดาวน์โหลดไฟล์ข้อมูลทดสอบ</b>
     <a href="#" onclick="dlB64(EMBED_B64,'CTS_Database.xlsx');return false">📗 CTS_Database.xlsx<small>ฐานข้อมูลเริ่มต้น (เอกสาร, ถัง, ประวัติ)</small></a>
@@ -12598,17 +12600,22 @@ function loadWB(wb){loadWB0(wb);ensureTestData()}
 function loadWB0(wb){DB={};HD={};wb.SheetNames.forEach(n=>{const ws=wb.Sheets[n];const a=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});HD[n]=(a[0]||[]).map(String);DB[n]=XLSX.utils.sheet_to_json(ws,{defval:''}).map(r=>{const o={};HD[n].forEach(h=>o[h]=r[h]??'');return o})});}
 function buildWB(){const wb=XLSX.utils.book_new();Object.keys(DB).forEach(n=>{const aoa=[HD[n],...DB[n].map(r=>HD[n].map(h=>r[h]??''))];const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=HD[n].map(h=>({wch:Math.min(Math.max(h.length,...DB[n].map(r=>String(r[h]??'').length))+3,60)}));XLSX.utils.book_append_sheet(wb,ws,n)});return wb}
 function setSt(t){$('#dbst').textContent=t}
-async function persist(){try{const wb=buildWB();if(fileHandle){const w=await fileHandle.createWritable();await w.write(XLSX.write(wb,{type:'array',bookType:'xlsx'}));await w.close();setSt('✅ เขียนลงไฟล์ Excel แล้ว: '+fileHandle.name+' ('+new Date().toLocaleTimeString('th-TH')+')')}else{try{localStorage.setItem('cts_db_b64',XLSX.write(wb,{type:'base64',bookType:'xlsx'}))}catch(e){}setSt('💾 เก็บในเบราว์เซอร์ (ยังไม่ได้เชื่อมไฟล์ Excel) – กด "เชื่อมไฟล์ Excel" เพื่อเขียนลงไฟล์จริง หรือ "ดาวน์โหลด"')}}catch(e){setSt('⚠️ บันทึกไม่สำเร็จ: '+e.message)}renderDb()}
-function initDb(){let b=null;try{b=localStorage.getItem('cts_db_b64')}catch(e){}loadWB(XLSX.read(b||EMBED_B64,{type:'base64'}));setSt(b?'💾 โหลดข้อมูลที่เก็บไว้ในเบราว์เซอร์':'ข้อมูลเริ่มต้นฝังในไฟล์ HTML – กด "เชื่อมไฟล์ Excel" เพื่อใช้ CTS_Database.xlsx')}
+async function persist(){try{const wb=buildWB();if(fileHandle){const w=await fileHandle.createWritable();await w.write(XLSX.write(wb,{type:'array',bookType:'xlsx',compression:true}));await w.close();setSt('✅ บันทึกลงไฟล์ '+fileHandle.name+' แล้ว ('+new Date().toLocaleTimeString('th-TH')+')')}else{try{localStorage.setItem('cts_db_b64',XLSX.write(wb,{type:'base64',bookType:'xlsx'}))}catch(e){}setSt('💾 เก็บในเบราว์เซอร์ (ยังไม่ได้เชื่อมไฟล์ Excel) – กด "เชื่อมไฟล์ Excel" เพื่อเขียนลงไฟล์จริง หรือ "ดาวน์โหลด"')}}catch(e){try{localStorage.setItem('cts_db_b64',XLSX.write(buildWB(),{type:'base64',bookType:'xlsx'}))}catch(_){}setSt('⚠️ เขียนลงไฟล์ไม่สำเร็จ ('+e.message+') เก็บไว้ในเบราว์เซอร์แทน – ปิดไฟล์ใน Excel แล้วกด "เชื่อมไฟล์เดิมอีกครั้ง" หรือดาวน์โหลด')}renderDb()}
+function initDb(){let b=null;try{b=localStorage.getItem('cts_db_b64')}catch(e){}loadWB(XLSX.read(b||EMBED_B64,{type:'base64'}));setSt((b?'💾 โหลดข้อมูลที่เก็บไว้ในเบราว์เซอร์':'ข้อมูลเริ่มต้นฝังในไฟล์ HTML')+(location.protocol==='file:'?' – เปิดจากเครื่อง: กด "เชื่อมไฟล์ Excel" เลือก CTS_Database.xlsx เพื่อบันทึกลงไฟล์ตรงๆ':' – เปิดจากเว็บ: ทำรายการแล้วกด "ดาวน์โหลดข้อมูลปัจจุบัน"'));idbGet().then(h=>{if(h){window._fh=h;const r=$('#rcbtn');if(r){r.style.display='';r.textContent='🔗 เชื่อมไฟล์เดิมอีกครั้ง: '+h.name}}}).catch(()=>{})}
 async function connectFile(){
   if(!window.showOpenFilePicker){$('#fpick').click();return}
   try{const [h]=await showOpenFilePicker({types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
-    await h.requestPermission({mode:'readwrite'});const f=await h.getFile();loadWB(XLSX.read(await f.arrayBuffer(),{type:'array'}));fileHandle=h;setSt('✅ เชื่อมไฟล์แล้ว: '+h.name+' – ทุกรายการจะบันทึกลงไฟล์นี้');renderDb();go('home',null,true)}catch(e){}}
+    await h.requestPermission({mode:'readwrite'});const f=await h.getFile();loadWB(XLSX.read(await f.arrayBuffer(),{type:'array'}));fileHandle=h;idbSet(h);setSt('✅ เชื่อมไฟล์แล้ว: '+h.name+' – ทุกรายการจะบันทึกลงไฟล์นี้');renderDb();go('home',null,true)}catch(e){}}
+function idbOpen(){return new Promise((ok,no)=>{const r=indexedDB.open('cts_fs',1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function idbSet(h){try{const d=await idbOpen();d.transaction('k','readwrite').objectStore('k').put(h,'fh')}catch(e){}}
+async function idbGet(){const d=await idbOpen();return new Promise(ok=>{const q=d.transaction('k').objectStore('k').get('fh');q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})}
+async function reconnectFile(){const h=window._fh;if(!h)return connectFile();try{if(await h.requestPermission({mode:'readwrite'})!=='granted')return;const f=await h.getFile();loadWB(XLSX.read(await f.arrayBuffer(),{type:'array'}));fileHandle=h;setSt('✅ เชื่อมไฟล์เดิมแล้ว: '+h.name);renderDb();go('home',null,true)}catch(e){setSt('⚠️ เชื่อมไฟล์เดิมไม่ได้: '+e.message)}}
+async function saveAsNew(){if(!window.showSaveFilePicker){downloadXlsx();return}try{const h=await showSaveFilePicker({suggestedName:'CTS_Database.xlsx',types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});fileHandle=h;idbSet(h);await persist()}catch(e){}}
 $('#fpick').onchange=async e=>{const f=e.target.files[0];if(!f)return;loadWB(XLSX.read(await f.arrayBuffer(),{type:'array'}));setSt('โหลดจากไฟล์ '+f.name+' (เบราว์เซอร์นี้เขียนกลับไฟล์ตรงๆ ไม่ได้ ใช้ปุ่มดาวน์โหลดหลังทำรายการ)');renderDb();go('home',null,true)};
 function dlB64(b64,name){const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
   const url=URL.createObjectURL(new Blob([u],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}
-function downloadXlsx(){XLSX.writeFile(buildWB(),'CTS_Database.xlsx')}
-function resetDb(){try{localStorage.removeItem('cts_db_b64')}catch(e){}fileHandle=null;newRows.clear();initDb();renderDb();go('login',null,true)}
+function downloadXlsx(){XLSX.writeFile(buildWB(),'CTS_Database.xlsx',{compression:true})}
+async function resetDb(){if(!confirm('เคลียร์ข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น (ล้างรายการที่ทำไว้)?'+(fileHandle?'\nไฟล์ '+fileHandle.name+' จะถูกเขียนทับด้วยข้อมูลเริ่มต้น':'')))return;try{localStorage.removeItem('cts_db_b64')}catch(e){}newRows.clear();loadWB(XLSX.read(EMBED_B64,{type:'base64'}));if(fileHandle)await persist();else setSt('🧹 เคลียร์ข้อมูลแล้ว (ค่าเริ่มต้น)');renderDb();go('login',null,true)}
 function renderDb(){const sel=$('#shsel');const names=Object.keys(DB);sel.innerHTML=names.map(n=>`<option ${n===dbSheet?'selected':''} value="${n}">${n} (${DB[n].length})</option>`).join('');
   const rows=DB[dbSheet]||[];$('#dbtb').innerHTML=`<table><tr>${(HD[dbSheet]||[]).map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr class="${newRows.has(dbSheet+':'+i)?'new':''}">${HD[dbSheet].map(h=>`<td>${esc(r[h])}</td>`).join('')}</tr>`).join('')}</table>`;renderQr()}
 function renderQr(){const sel=$('#qrsel');if(!sel||!DB.MASTER_CYLINDER_GAS)return;const ORD='RTBLUXC';const sets=[...new Set(DB.MASTER_CYLINDER_GAS.map(c=>c.TEST_SET).filter(Boolean))].sort((a,b)=>(ORD.indexOf(a[0])-ORD.indexOf(b[0]))||(a<b?-1:a>b?1:0));const cur=sel.value&&sets.includes(sel.value)?sel.value:(sets.includes('R01')?'R01':sets[0]);
