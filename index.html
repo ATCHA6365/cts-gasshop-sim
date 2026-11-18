@@ -116,7 +116,8 @@ table{border-collapse:collapse;font-size:11px;width:100%}
 th{position:sticky;top:0;background:var(--g);color:#fff;padding:6px 8px;text-align:left;white-space:nowrap}
 td{padding:5px 8px;border-top:1px solid #eee;white-space:nowrap}
 tr.new td{background:#fffbe0}
-@media(max-width:600px){body{padding:0;gap:0;display:block;background:var(--bg)}.phone{width:100vw;height:100dvh;border-radius:0;padding:0;box-shadow:none}.screen{border-radius:0}.sb{display:none}.db{margin:14px;width:auto}}
+@media(max-width:600px){body{padding:0;gap:0;display:block;background:var(--bg)}.phone{width:100vw;height:100dvh;border-radius:0;padding:0;box-shadow:none}.screen{border-radius:0}.sb{display:none}.db{display:none}.db.show{display:block;position:fixed;inset:0;z-index:60;margin:0;width:auto;overflow:auto;border-radius:0;max-width:none}#dbfab{display:block!important}}
+#dbfab{display:none;position:fixed;top:6px;right:6px;z-index:70;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:16px;border:0}
 .mi img{height:92px;display:block;margin:0 auto 8px;object-fit:contain}
 .li{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-bottom:1px solid #eee;cursor:pointer;gap:10px}.li:last-child{border:0}
 .bdg{background:#e8f8ee;color:var(--g2);font-weight:700;font-size:12px;border-radius:10px;padding:9px 8px;min-width:50px;text-align:center}
@@ -13149,5 +13150,6 @@ setInterval(()=>{const d=new Date();$('#clk').textContent=pad(d.getHours(),2)+':
 (function(){const d=new Date();$('#clk').textContent=pad(d.getHours(),2)+':'+pad(d.getMinutes(),2)})();
 initDb();renderDb();renderLog();go('login');
 </script>
+<button id="dbfab" onclick="const d=document.querySelector('.db');d.classList.toggle('show');this.textContent=d.classList.contains('show')?'✕':'📁'" title="ข้อมูลทดสอบ / ดาวน์โหลด">📁</button>
 </body>
 </html>
